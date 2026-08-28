@@ -1,5 +1,6 @@
 <script setup>
 import ApiStatus from './components/ApiStatus.vue'
+import UploadForm from './components/UploadForm.vue'
 </script>
 
 <template>
@@ -15,6 +16,7 @@ import ApiStatus from './components/ApiStatus.vue'
     </div>
 
     <ApiStatus />
+    <UploadForm />
   </main>
 </template>
 
