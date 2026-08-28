@@ -63,8 +63,9 @@ project.
 - **CORS** locked to an explicit allow list of origins (set via env var),
   not wildcarded.
 - **Input validation** via Pydantic models on every request body. Uploaded
-  files (added in a later phase) get checked by size, extension, and magic
-  bytes before processing.
+  files are checked against a size limit and their actual file signature
+  (magic bytes), not just their extension, so a renamed/spoofed file gets
+  rejected before it's processed.
 - **No persistent storage of uploaded documents.** Processing happens
   in-memory for the life of the request.
 - **Centralized error handling.** Exceptions are caught, logged with context
@@ -130,7 +131,7 @@ CredenceScan/
       security middleware (rate limiting, CORS, structured logging, error
       handling), README.
 - [ ] **Phase 2:** document upload endpoint with file validation
-      (type/size/magic-byte checks) and OCR text extraction.
+      (size/magic-byte checks, done) and OCR text extraction (pending).
 - [ ] **Phase 3:** synthetic dataset generation and training the
       document-type classifier / field-extraction model.
 - [ ] **Phase 4:** budgeting insight engine, JWT auth, frontend upload +
