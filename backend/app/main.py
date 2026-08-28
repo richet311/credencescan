@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.routes import health
+from app.api.routes import documents, health
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.security import limiter
@@ -48,3 +48,4 @@ async def on_startup():
 
 
 app.include_router(health.router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
