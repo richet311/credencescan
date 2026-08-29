@@ -9,6 +9,7 @@ from app.api.routes import documents, health
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.security import limiter
+from app.services.ocr import get_reader
 
 app = FastAPI(title=settings.app_name)
 
@@ -45,6 +46,8 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
 @app.on_event("startup")
 async def on_startup():
     logger.info("%s starting up in '%s' mode", settings.app_name, settings.environment)
+    get_reader()
+    logger.info("OCR model loaded and ready")
 
 
 app.include_router(health.router, prefix="/api")

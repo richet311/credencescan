@@ -13,7 +13,7 @@ class FileValidationError(Exception):
     pass
 
 
-async def validate_upload(file: UploadFile) -> bytes:
+async def validate_upload(file: UploadFile) -> tuple[bytes, str]:
     contents = await file.read()
 
     if len(contents) == 0:
@@ -23,9 +23,10 @@ async def validate_upload(file: UploadFile) -> bytes:
         limit_mb = settings.max_upload_size_bytes // (1024 * 1024)
         raise FileValidationError(f"File exceeds the {limit_mb}MB limit.")
 
-    if not any(contents.startswith(signature) for signature in ALLOWED_SIGNATURES):
-        raise FileValidationError(
-            "Unsupported file type. Only PDF, PNG, and JPEG are accepted."
-        )
+    for signature, content_type in ALLOWED_SIGNATURES.items():
+        if contents.startswith(signature):
+            return contents, content_type
 
-    return contents
+    raise FileValidationError(
+        "Unsupported file type. Only PDF, PNG, and JPEG are accepted."
+    )
