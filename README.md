@@ -20,9 +20,11 @@ actually useful to nonprofits and individuals working on financial literacy.
 ## What it does
 
 1. A user uploads a sample financial document (image or PDF).
-2. The backend extracts text via OCR, classifies the document type, and
-   pulls out key fields (income, expenses, line items) using a lightweight
-   model trained on a synthetic, self-generated dataset.
+2. The backend extracts the text. Born-digital PDFs get their embedded text
+   pulled directly; scanned PDFs and images fall back to OCR (EasyOCR). It
+   then classifies the document type and pulls out key fields (income,
+   expenses, line items) using a lightweight model trained on a synthetic,
+   self-generated dataset.
 3. A rules-based insight engine turns those fields into plain-language
    feedback: spending breakdown, savings rate, budgeting suggestions.
 4. The frontend shows the extracted data and insights. Nothing is persisted
@@ -50,7 +52,7 @@ backend/   FastAPI service
 | Backend    | Python, FastAPI                               |
 | Auth       | JWT (`python-jose`, `passlib`)                |
 | Rate limiting | `slowapi`                                   |
-| OCR        | EasyOCR / Tesseract (added in a later phase)  |
+| OCR        | EasyOCR, PyMuPDF (for born-digital PDF text)  |
 | Hosting    | Render.com free tier                          |
 
 No paid or credit-card-gated cloud services are used anywhere in this
@@ -94,7 +96,9 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 The API is now at `http://localhost:8000`, with a health check at
-`GET /api/health`.
+`GET /api/health`. On first startup it downloads the EasyOCR model weights
+(a one-time download, needs internet access); after that they're cached
+locally and startup is fast.
 
 ### Frontend
 
@@ -130,8 +134,9 @@ CredenceScan/
 - [x] **Phase 1:** repo scaffold. FastAPI + Vue skeletons wired together,
       security middleware (rate limiting, CORS, structured logging, error
       handling), README.
-- [ ] **Phase 2:** document upload endpoint with file validation
-      (size/magic-byte checks, done) and OCR text extraction (pending).
+- [x] **Phase 2:** document upload endpoint with file validation
+      (size/magic-byte checks) and text extraction (direct text-layer
+      extraction for born-digital PDFs, OCR fallback for scans and images).
 - [ ] **Phase 3:** synthetic dataset generation and training the
       document-type classifier / field-extraction model.
 - [ ] **Phase 4:** budgeting insight engine, JWT auth, frontend upload +
