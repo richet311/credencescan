@@ -1,0 +1,50 @@
+# Render Blueprint for CredenceScan. Deploy via Render's "New +" -> "Blueprint"
+# and point it at this repo. Verify these keys against Render's current
+# Blueprint docs before relying on this — the schema has changed over time
+# and this hasn't been run against a live Render account.
+#
+# After the first deploy, both services get an onrender.com URL. Set
+# ALLOWED_ORIGINS (api service) and VITE_API_BASE_URL (frontend service) to
+# each other's real URL, then redeploy — they're left unset here (sync: false)
+# because neither URL is known until after the first deploy.
+services:
+  - type: web
+    name: credencescan-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: >-
+      pip install -r requirements.txt &&
+      python -m app.ml.generate_dataset &&
+      python -m app.ml.train_classifier
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: RATE_LIMIT_DEFAULT
+        value: 60/minute
+      - key: MAX_UPLOAD_SIZE_BYTES
+        value: "10485760"
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "30"
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: DEMO_USERNAME
+        value: demo
+      - key: DEMO_PASSWORD
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  - type: web
+    name: credencescan-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
