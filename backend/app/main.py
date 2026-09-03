@@ -5,10 +5,11 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.routes import documents, health
+from app.api.routes import auth, documents, health
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.security import limiter
+from app.services.classifier import ClassifierNotTrainedError, get_model
 from app.services.ocr import get_reader
 
 app = FastAPI(title=settings.app_name)
@@ -49,6 +50,13 @@ async def on_startup():
     get_reader()
     logger.info("OCR model loaded and ready")
 
+    try:
+        get_model()
+        logger.info("Document classifier loaded and ready")
+    except ClassifierNotTrainedError as exc:
+        logger.warning("Document classifier not available: %s", exc)
+
 
 app.include_router(health.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")

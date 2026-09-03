@@ -20,7 +20,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 30
 
-    # Upload constraints for later document-upload endpoints
+    # Demo-only credentials for the /api/auth/login example. Not a real user
+    # system; illustrates JWT-protected routes.
+    demo_username: str = "demo"
+    demo_password: str = "change-me-in-.env"
+
+    # Upload constraints
     max_upload_size_bytes: int = 10 * 1024 * 1024  # 10 MB
 
     @property
