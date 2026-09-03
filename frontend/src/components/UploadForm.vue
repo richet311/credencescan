@@ -51,7 +51,10 @@ async function onSubmit() {
 <template>
   <div class="upload-form">
     <h2>Try a sample document</h2>
-    <p class="hint">PDF, PNG, or JPEG only. Nothing is stored after this request.</p>
+    <p class="hint">
+      PDF, PNG, or JPEG only. The original file is never stored; only the
+      insights below are kept in an in-memory history for this session.
+    </p>
 
     <input type="file" accept=".pdf,.png,.jpg,.jpeg" @change="onFileChange" />
     <button :disabled="submitting" @click="onSubmit">
@@ -59,7 +62,30 @@ async function onSubmit() {
     </button>
 
     <p v-if="error" class="error">{{ error }}</p>
-    <pre v-if="result" class="result">{{ JSON.stringify(result, null, 2) }}</pre>
+
+    <div v-if="result" class="result">
+      <p>
+        <strong>Document type:</strong> {{ result.document_type || 'unknown' }}
+        <span v-if="result.confidence" class="muted">
+          ({{ (result.confidence * 100).toFixed(1) }}% confidence)
+        </span>
+      </p>
+
+      <ul v-if="Object.keys(result.fields || {}).length" class="fields">
+        <li v-for="(value, key) in result.fields" :key="key">
+          {{ key.replaceAll('_', ' ') }}: ${{ value.toFixed(2) }}
+        </li>
+      </ul>
+
+      <ul class="insights">
+        <li v-for="(insight, index) in result.insights" :key="index">{{ insight }}</li>
+      </ul>
+
+      <details>
+        <summary>Raw extracted text</summary>
+        <pre>{{ result.extracted_text }}</pre>
+      </details>
+    </div>
   </div>
 </template>
 
@@ -87,6 +113,19 @@ button {
   padding: 0.75rem;
   border-radius: 6px;
   margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+.muted {
+  color: #666;
   font-size: 0.85rem;
+}
+.fields,
+.insights {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+.result pre {
+  white-space: pre-wrap;
+  font-size: 0.8rem;
 }
 </style>

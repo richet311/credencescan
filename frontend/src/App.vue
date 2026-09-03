@@ -1,4 +1,5 @@
 <script setup>
+import AccountPanel from './components/AccountPanel.vue'
 import ApiStatus from './components/ApiStatus.vue'
 import UploadForm from './components/UploadForm.vue'
 </script>
@@ -17,6 +18,7 @@ import UploadForm from './components/UploadForm.vue'
 
     <ApiStatus />
     <UploadForm />
+    <AccountPanel />
   </main>
 </template>
 
