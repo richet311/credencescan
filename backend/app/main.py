@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,9 +12,42 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.core.security import limiter
 from app.services.classifier import ClassifierNotTrainedError, get_model
-from app.services.ocr import get_reader
+from app.services.ocr import OcrExtractionError, get_reader
 
-app = FastAPI(title=settings.app_name)
+INSECURE_DEFAULTS = {"jwt_secret_key": "change-me-in-.env", "demo_password": "change-me-in-.env"}
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    logger.info("%s starting up in '%s' mode", settings.app_name, settings.environment)
+
+    if settings.environment == "production":
+        for field, default_value in INSECURE_DEFAULTS.items():
+            if getattr(settings, field) == default_value:
+                logger.error(
+                    "%s is left at its insecure default in production. "
+                    "Set it via the environment before real traffic hits this service.",
+                    field,
+                )
+
+    try:
+        get_reader()
+        logger.info("OCR model loaded and ready")
+    except OcrExtractionError as exc:
+        logger.error("OCR unavailable, uploads will fall back to PDF text only: %s", exc)
+
+    try:
+        get_model()
+        logger.info("Document classifier loaded and ready")
+    except ClassifierNotTrainedError as exc:
+        logger.warning("Document classifier not available: %s", exc)
+
+    yield
+
+    logger.info("%s shutting down", settings.app_name)
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -24,6 +59,15 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @app.exception_handler(RequestValidationError)
@@ -42,19 +86,6 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error."},
     )
-
-
-@app.on_event("startup")
-async def on_startup():
-    logger.info("%s starting up in '%s' mode", settings.app_name, settings.environment)
-    get_reader()
-    logger.info("OCR model loaded and ready")
-
-    try:
-        get_model()
-        logger.info("Document classifier loaded and ready")
-    except ClassifierNotTrainedError as exc:
-        logger.warning("Document classifier not available: %s", exc)
 
 
 app.include_router(health.router, prefix="/api")

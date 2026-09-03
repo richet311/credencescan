@@ -4,6 +4,7 @@ import easyocr
 from app.core.logging import logger
 
 _reader: easyocr.Reader | None = None
+_reader_load_error: str | None = None
 
 
 class OcrExtractionError(Exception):
@@ -11,16 +12,30 @@ class OcrExtractionError(Exception):
 
 
 def get_reader() -> easyocr.Reader:
-    global _reader
+    """Loads the OCR model once and caches the result, including a prior
+    failure, so a resource-constrained host doesn't retry (and re-fail) a
+    slow load on every single request."""
+    global _reader, _reader_load_error
+
+    if _reader_load_error is not None:
+        raise OcrExtractionError(_reader_load_error)
+
     if _reader is None:
         logger.info("Loading OCR model (first call only)...")
-        _reader = easyocr.Reader(["en"], gpu=False, verbose=False)
+        try:
+            _reader = easyocr.Reader(["en"], gpu=False, verbose=False)
+        except Exception as exc:
+            _reader_load_error = f"OCR model failed to load: {exc}"
+            logger.error(_reader_load_error)
+            raise OcrExtractionError(_reader_load_error) from exc
+
     return _reader
 
 
 def _ocr_image_bytes(image_bytes: bytes) -> str:
+    reader = get_reader()
     try:
-        lines = get_reader().readtext(image_bytes, detail=0, paragraph=True)
+        lines = reader.readtext(image_bytes, detail=0, paragraph=True)
     except Exception as exc:
         raise OcrExtractionError(f"OCR failed: {exc}") from exc
     return "\n".join(lines).strip()

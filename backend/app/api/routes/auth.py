@@ -1,3 +1,5 @@
+import secrets
+
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel
 
@@ -16,10 +18,10 @@ class LoginRequest(BaseModel):
 @router.post("/login")
 @limiter.limit("5/minute")
 async def login(request: Request, credentials: LoginRequest):
-    if (
-        credentials.username != settings.demo_username
-        or credentials.password != settings.demo_password
-    ):
+    username_ok = secrets.compare_digest(credentials.username, settings.demo_username)
+    password_ok = secrets.compare_digest(credentials.password, settings.demo_password)
+
+    if not (username_ok and password_ok):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
