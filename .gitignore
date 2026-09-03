@@ -6,6 +6,10 @@ backend/*.egg-info/
 backend/.pytest_cache/
 backend/.env
 
+# --- Generated ML artifacts (regenerate via app/ml scripts) ---
+backend/app/ml/data/
+backend/app/ml/model/
+
 # --- Node / frontend ---
 frontend/node_modules/
 frontend/dist/
